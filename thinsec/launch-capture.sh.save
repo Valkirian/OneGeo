@@ -1,0 +1,52 @@
+#!/bin/bash
+
+SESS="capture"
+
+main()
+{
+    sockets_spec="ipc:///dev/shm/cam"
+    stage_dir="$HOME/remote-stage"
+    gui_script="$HOME/onegeo-hw/code/thinsec/microscope/main_server.py"
+    driver_script_dir="$HOME/onegeo-hw/code/pgr"
+    remote_locations="/data2/image/stage"
+    local_port=5000
+    check_start
+    #trap cleanup EXIT
+
+    tmux new-session -s $SESS -d
+    tmux split-window -t $SESS -v
+    tmux split-window -t "$SESS:1.top" -h
+    tmux split-window -t "$SESS:1.bottom" -h
+    
+    tmux send -t "$SESS:1.top-left" Enter "localpy2; python ${gui_script} ${sockets_spec} ${local_port}" Enter
+    tmux send -t "$SESS:1.top-right" Enter "${driver_script_dir}/server-zmq/bin/release/flyzmqserver ${sockets_spec} ${stage_dir} --report-period=0.5 --compression=1" Enter
+    tmux send -t "$SESS:1.bottom-left" Enter "localpy3; ${driver_script_dir}/client-zmq/frame_observer.py ${sockets_spec}.vid" Enter
+    ##tmux send -t "$SESS:1.bottom-right" Enter "sshfs -o idmap=user remote_bot@desarrollo0:${remote_locations} ${stage_dir}" Enter
+    
+    sleep 2
+    tmux send -t "$SESS:1.bottom-right" "chromium-browser \"http://localhost:${local_port}\"" Enter
+
+    #tmux attach -t $SESS
+}
+
+cleanup()
+{
+    for idx in 0 1 2 3; do
+       tmux send -t "${SESS}:1.${idx}" C-c
+    done
+
+    sleep 2
+    tmux kill-session -t $SESS
+}
+
+check_start()
+{
+    tmux has-session -t $SESS 2>/dev/null || return
+    echo "Capture session is already running. Aborting."
+    exit
+}
+
+#set -x
+main "$@"
+
+

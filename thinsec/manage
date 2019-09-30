@@ -1,0 +1,276 @@
+#!/bin/bash
+
+HERE=$(cd $(dirname $0); pwd -P)
+LIVEUPD_PID="/dev/shm/$(basename $0).pid"
+
+FILE_BASE='~/microscope/app'
+EXEC_BASE="localpy; cd ${FILE_BASE}/microscope"
+WORK_USER="pi"
+CAM_HOST="192.168.10.101"     #"rpi2-0.local"
+CAM_PORT=50000
+ROUTER_ADDR="ipc:///tmp/mscproute.$$"
+DEALER_SAVE_PATH="$HOME/image"
+DEALER_NOTIFY_PORT=6000
+
+SWEEP_CONTROL_PORT="$(( $CAM_PORT + 5 ))"
+SWEEP_DEALER_PORT="$(( $SWEEP_CONTROL_PORT + 1 ))"
+MOTOR_STATUS_PORT="$(( $SWEEP_DEALER_PORT + 2 ))"
+STITCH_PORT="$(( $MOTOR_STATUS_PORT + 1 ))"
+SWEEP_DEALER_ADDR="${CAM_HOST}:${SWEEP_DEALER_PORT}"
+GIT_PULL="cd ${FILE_BASE}; git stash; git stash clear; git pull"
+
+main ()
+{
+    action="$1"; shift
+
+    sessions="master processor"
+
+    case ${action} in
+        start)
+            start
+            ;;
+        stop)
+            stop
+            ;;
+        update)
+            update
+            ;;
+        pull)
+            pull
+            ;;
+        *)
+            echo "Usage: $(basename $0) start|stop|update|pull"
+            exit 1
+            ;;
+    esac
+}
+
+start ()
+{
+    if [[ -e $LIVEUPD_PID ]]; then
+        echo "$0's background task is already running with PGID=$(< $LIVEUPD_PID)"
+        exit 1
+    fi
+
+    update_all_files
+    echo "Now do:"
+
+    for session in ${sessions}; do
+        create_session_${session}
+    done
+
+    start_live_update &
+
+    pgid=$(ps -o pgid= $$ | grep -o '[0-9]*')
+    echo "Live file uploading on PGID $pgid"
+    echo "$pgid" > $LIVEUPD_PID
+}
+
+stop ()
+{
+    for session in ${sessions}; do
+        stop_session_${session}
+    done
+
+    stop_live_update
+}
+
+update ()
+{
+    for session in ${sessions}; do
+        update_session_${session}
+    done
+}
+
+pull ()
+{
+    pull_session_master
+}
+
+create_session_master ()
+{
+    local session=cam
+    local target="${WORK_USER}@${CAM_HOST}"
+    local conn="ssh -q -t ${target}"
+
+    if $conn "tmux list-session 2>&1" | grep -q "^${session}:"; then
+        :
+    else
+        $conn "tmux new-session -d -s $session"
+
+        $conn "tmux rename-window -t${session}:1 run \; split-window -t${session}:1 -h \; split-window -t${session}:1.right -v \; split-window -t${session}:1.left -v"
+        $conn "tmux new-window -t${session}:2 -n edit"
+
+        commands_start_master "$session" "$conn"
+        $conn "tmux send-keys -t${session}:2 \"cd ${FILE_BASE}\" Enter"
+
+        $conn "tmux select-window -t${session}:1"
+
+        echo "  ssh -t ${target} tmux attach -d -t ${session}"
+    fi
+}
+
+commands_start_master ()
+{
+    local session=$1; shift
+    local conn=$1; shift
+
+    $conn "tmux send-keys -t${session}:1.top-left \"${EXEC_BASE}; python main_server.py -0 localhost:${CAM_PORT} -s ${SWEEP_CONTROL_PORT} -m ${MOTOR_STATUS_PORT} -d ${SWEEP_DEALER_PORT}\" Enter"
+    $conn "tmux send-keys -t${session}:1.bottom-right \"${EXEC_BASE}; python motor_status.py -z ${MOTOR_STATUS_PORT}\" Enter"
+    $conn "tmux send-keys -t${session}:1.bottom-left \"${EXEC_BASE}; python uart_events_display.py\" Enter"
+    command_start_camera "$session" "$conn"
+}
+
+command_start_camera ()
+{
+    local session=$1; shift
+    local conn=$1; shift
+
+    $conn "tmux send-keys -t${session}:1.top-right \"${EXEC_BASE}; python camera_server.py -t1 -f -v -I 2592 -E 1944 -r 11\" Enter"
+}
+
+commands_stop_master ()
+{
+    local session=$1; shift
+    local conn=$1; shift
+
+    $conn "tmux send-keys -t${session}:1.top-left C-c Enter"
+    $conn "tmux send-keys -t${session}:1.top-right C-c Enter"
+    $conn "tmux send-keys -t${session}:1.bottom-right C-c Enter"
+}
+
+stop_session_master ()
+{
+    local session=cam
+    local target="${WORK_USER}@${CAM_HOST}"
+    local conn="ssh ${target}"
+
+    if $conn "tmux list-sessions 2>&1" | grep -q "^${session}:"; then
+
+        commands_stop_master "$session" "$conn"
+        $conn "tmux kill-session -t $session"
+    fi
+}
+
+update_session_master ()
+{
+    local session=cam
+    local target="${WORK_USER}@${CAM_HOST}"
+    local conn="ssh ${target}"
+
+    if $conn "tmux list-sessions 2>&1" | grep -q "^${session}:"; then
+
+        local conn="ssh ${target}"
+        commands_stop_master "$session" "$conn"
+        sleep 2
+        commands_start_master "$session" "$conn"
+
+    else
+        local conn="ssh -q -t ${target}"
+        $conn "cd ${FILE_BASE}; git pull"
+
+    fi
+}
+
+pull_session_master ()
+{
+    local session=cam
+    local target="${WORK_USER}@${CAM_HOST}"
+    local conn="ssh ${target}"
+
+    if $conn "tmux list-sessions 2>&1" | grep -q "^${session}:"; then
+
+        local conn="ssh ${target}"
+        commands_stop_master "$session" "$conn"
+        sleep 2
+        $conn "tmux send-keys -t${session}:1.bottom-right \"echo; date; ${GIT_PULL}\" Enter"
+        sleep 3
+        commands_start_master "$session" "$conn"
+
+    else
+        local conn="ssh -q -t ${target}"
+        $conn "cd ${FILE_BASE}; git pull"
+
+    fi
+}
+
+create_session_processor ()
+{
+    local session=cam
+
+    local cmd1="python2 $HERE/processor/sweep_dealer.py -a ${SWEEP_DEALER_ADDR} -r ${ROUTER_ADDR} -u ${DEALER_NOTIFY_PORT} -o ${DEALER_SAVE_PATH}"
+    local cmd2="python2 $HERE/processor/sweep_router.py -a ${ROUTER_ADDR} -p ${STITCH_PORT}"
+
+    if tmux list-session 2>&1 | grep -q "^${session}:"; then
+        :
+    else
+        tmux new-session -d -s $session
+        tmux split-window -t${session}:1 -v
+        tmux send-keys -t${session}:1.top "$cmd1" Enter
+        tmux send-keys -t${session}:1.bottom "$cmd2" Enter
+
+        echo "  tmux attach -d -t ${session}"
+
+        local proc_cmd="processor/sweep_processor.py -r $(get_my_ip):${STITCH_PORT} -n ${DEALER_NOTIFY_PORT}"
+        echo "Processing nodes can be started by running: $proc_cmd"
+    fi
+}
+
+stop_session_processor ()
+{
+    local session=cam
+
+    if tmux list-session 2>&1 | grep -q "^${session}:"; then
+
+        tmux send-keys -t${session}:1.top C-c Enter
+        tmux send-keys -t${session}:1.bottom C-c Enter
+        tmux kill-session -t $session
+    fi
+}
+
+update_session_processor ()
+{
+    local session=cam
+
+    if tmux list-session 2>&1 | grep -q "^${session}:"; then
+
+        tmux send-keys -t${session}:1.top C-c Enter
+        sleep 2
+        tmux send-keys -t${session}:1.top "$cmd" Enter
+    fi
+}
+
+start_live_update ()
+{
+    $HERE/live-file-update "${WORK_USER}@${CAM_HOST}" $FILE_BASE | while read MODFI; do
+        if [[ $MODFI == *"/microscope/"*".py" ]]; then
+            update_session_master
+        elif [[ $MODFI == *"/processor/"*".py" ]]; then
+            update_session_processor
+        fi
+    done
+}
+
+stop_live_update ()
+{
+    if [[ -e $LIVEUPD_PID ]]; then
+        local pgid="$(< $LIVEUPD_PID)"
+        setsid kill -- -$pgid && rm $LIVEUPD_PID
+    fi
+}
+
+update_all_files ()
+{
+    for host in $CAM_HOST; do
+        local target="${WORK_USER}@$host"
+        rsync --exclude='.git/' -avz . $target:$FILE_BASE/
+    done
+}
+
+get_my_ip ()
+{
+    ifconfig eth0 | grep -w inet | head -1 | awk '{print $2}' | grep -o '[0-9]*[.][0-9]*[.][0-9]*[.][0-9]*'
+}
+
+[[ "$0" == "$BASH_SOURCE" ]] && main "$@"
+

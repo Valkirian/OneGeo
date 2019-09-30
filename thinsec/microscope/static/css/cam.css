@@ -1,0 +1,21 @@
+body{
+    font: 12px 'lucida grande',tahoma,verdana,arial,sans-serif;
+}
+
+.double-input .form-control {
+  width: 50%;
+  border-right-width: 0px;
+}
+
+.double-input .form-control:focus {
+  border-right-width: 1px;
+}
+
+.triple-input .form-control {
+  width: 33.3%;
+  border-right-width: 0px;
+}
+
+.triple-input .form-control:focus {
+  border-right-width: 1px;
+}

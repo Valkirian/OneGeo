@@ -1,0 +1,24 @@
+#!/bin/bash
+
+main ()
+{
+    machines=$1; shift
+    copy_base=$1; shift
+
+    log="/dev/shm/live-file-update.log"
+
+    inotifywait -r -m -q -e close_write --format '%w %f' . | while read MODW MODF; do 
+        MODFI="${MODW}${MODF}"
+
+        echo "#######################################" >> $log
+        echo "$(date): ${MODW} ${MODF}" >> $log
+
+        for mach in $machines; do
+            rsync --exclude='.git/' -avz ${MODFI} ${mach}:${copy_base}/${MODW}/ >> $log
+        done
+        echo "${MODFI}"
+    done
+}
+
+main "$@"
+
