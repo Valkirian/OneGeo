@@ -1,7 +1,7 @@
 # OneGeo
 ## Migracion de versiones
-. GEOMAS
-. Python3
-. MachineLearning
-. DeepLearning
-. Opencv-Python
++ GEOMAS
++ Python3
++ MachineLearning
++ DeepLearning
++ Opencv-Python
