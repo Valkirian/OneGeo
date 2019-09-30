@@ -27,8 +27,8 @@ import finejecucion
 import process_line
 from camera_cv_tools import CameraLink
 from camera_cv_tools import color_to_gray
-
 from common import DebugLog, get_utc_now_ms
+
 import dft_stitch as dsl
 import motor_api
 from motor_uart import MotorLink
