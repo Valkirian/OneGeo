@@ -2,8 +2,8 @@
 
 # Importando todas las librerias necesarias
 # Parchando modulos
-import gevent.monkey
-gevent.monkey.patch.all()
+from gevent import monkey
+monkey.patch_all()
 
 import argparse
 from collections import OrderedDict
