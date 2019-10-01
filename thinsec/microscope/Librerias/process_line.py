@@ -1,8 +1,9 @@
+import argparse
+
 def process_command_line():
 
     description = "Main program for controlling an automated microscope"
     parser = argparse.ArgumentParser(description=description)
-
     parser.add_argument(
         "camera_server_address",
         default="tcp://localhost:50000",

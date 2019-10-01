@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 import json
 import gevent
 import numpy as np
@@ -12,62 +13,50 @@ import common
 debug_log = common.DebugLog()
 
 class CameraLink(object):
-
     def __init__(self, zmq_context, name):
-
         self.name = name
-
         # pusher that emits camera configuration commands
         self.cmd_push = zmq_context.socket(zmq.PUSH)
-
         # subscriber that receives status updates
         self.inf_subs_stt = zmq_context.socket(zmq.SUB)
         self.inf_subs_stt.setsockopt(zmq.SUBSCRIBE, b'_stt_')
         # subscriber that receives configuration data
         self.inf_subs_cfg = zmq_context.socket(zmq.SUB)
         self.inf_subs_cfg.setsockopt(zmq.SUBSCRIBE, b'_cfg_')
-
         # subscriber that receives video frames
         self.img_subs = zmq_context.socket(zmq.SUB)
         self.img_subs.setsockopt(zmq.SUBSCRIBE, b'')
         self.last_frame_data = ''
 
     def connect(self, base_address):
-
         cmd_addr, stt_addr, vid_addr = get_socket_adresses(base_address)
-
         self.cmd_push.connect(cmd_addr)
         self.inf_subs_stt.connect(stt_addr)
         self.inf_subs_cfg.connect(stt_addr)
         self.img_subs.connect(vid_addr)
 
     def start(self, callback_config, callback_status):
-
         gevent.spawn(self.report_camera_config, callback_config)
         gevent.spawn(self.report_camera_status, callback_status)
         gevent.spawn(self.fetch_frames)
 
     def report_camera_config(self, callback):
-
         while True:
             rec = self.inf_subs_cfg.recv()
             message = json.loads(rec[5:])
             callback(message)
 
     def report_camera_status(self, callback):
-
         while True:
             rec = self.inf_subs_stt.recv()
             message = json.loads(rec[5:])
             callback(message)
 
     def fetch_frames(self):
-
         while True:
             self.last_frame_data = self.img_subs.recv()
 
     def take_picture(self):
-
         cols, rows = 2448, 2048
         frame = np.fromstring(self.last_frame_data, np.uint8)
         frame.resize((rows, cols, 3))
@@ -75,28 +64,22 @@ class CameraLink(object):
         return frame
 
     def set_config(self, params):
-
         self.cmd_push_dbg('config', params)
 
     def set_power(self, on=True):
-
         self.cmd_push_dbg('state', {'power': on})
 
     def set_sweep_settings(self, settings):
-
         self.cmd_push_dbg('sweep', settings)
 
     def configure_fastaxis_scan(self, settings):
-
         self.cmd_push_dbg('fastaxis', settings)
 
     def cmd_push_dbg(self, name, params):
-
         debug_log("->", "CMD", name, params)
         self.cmd_push.send_json([name, params])
 
 def get_socket_adresses(base_address):
-
     if base_address.startswith("ipc://"):
         cmd_addr = base_address + ".cmd"
         stt_addr = base_address + ".stt"
@@ -108,7 +91,6 @@ def get_socket_adresses(base_address):
         cmd_addr = "{}:{:d}".format(host, port)
         stt_addr = "{}:{:d}".format(host, port + 1)
         vid_addr = "{}:{:d}".format(host, port + 2)
-
     else:
         raise ValueError("Unsupported transport type")
 
@@ -213,7 +195,6 @@ def blankfield_generate_flat(bkg_in):
     h_new = (np.median(h) * np.ones_like(h)).astype('uint8')
     s_new = (np.median(s) * np.ones_like(s)).astype('uint8')
     v_new = (np.abs(get_cdf(v) - 5e-2).argmin()*np.ones_like(v)).astype('uint8')
-
     print("hnew: {}, snew: {}, vnew: {}".format(h_new.min(), s_new.min(),v_new.min()))
     bfi_new = cv2.cvtColor(cv2.merge((h_new, s_new, v_new)), cv2.COLOR_HSV2BGR)
     rel_corr = bfi_new.astype(float) / bkg_in
@@ -234,9 +215,7 @@ def adjust_gamma(image, gamma=1.0):
     # build a lookup table mapping the pixel values [0, 255] to
     # their adjusted gamma values
     invGamma = 1.0 / gamma
-    table = np.array([((i / 255.0) ** invGamma) * 255
-            for i in np.arange(0, 256)]).astype("uint8")
-
+    table = np.array([((i / 255.0) ** invGamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
     # apply gamma correction using the lookup table
     return cv2.LUT(image, table)
 
@@ -310,9 +289,7 @@ def entropy(image, subdivisions=10):
     h, w = image.shape[:2]
     stride_r = h/subdivisions
     stride_c = w/subdivisions
-    subregions = [image[stride_r*i:min(stride_r*(i+1), h),stride_c*j:min(stride_c*(j+1), w), :]
-                  for i in range(subdivisions)
-                  for j in range(subdivisions)]
+    subregions = [image[stride_r*i:min(stride_r*(i+1), h),stride_c*j:min(stride_c*(j+1), w), :] for i in range(subdivisions) for j in range(subdivisions)]
     entropies = [simple_entropy(subregion, 256) for subregion in subregions]
 
     return np.array(entropies)

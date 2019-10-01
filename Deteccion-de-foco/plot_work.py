@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import matplotlib.pyplot as plt
 import json
 from glob import glob
@@ -15,11 +13,8 @@ kinds = ('ppl', 'xpl')
 
 roi = 1024
 
-files = { kind: glob(pth.join(kind, str(roi), "focus-curve-*.json")) for kind
-         in kinds }
-data = { kind: { int(pth.splitext(pth.basename(fi).split('-')[-1])[0]):
-                 json.load(open(fi)) for fi in file_l }
-        for kind, file_l in files.items() }
+files = { kind: glob(pth.join(kind, str(roi), "focus-curve-*.json")) for kind in kinds }
+data = { kind: { int(pth.splitext(pth.basename(fi).split('-')[-1])[0]): json.load(open(fi)) for fi in file_l } for kind, file_l in files.items() }
 
 for kind in kinds:
     plt.figure()

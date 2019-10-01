@@ -13,7 +13,6 @@ import signal
 import struct
 import StringIO
 import sys
-
 import cv2
 from flask import Flask, send_file
 import gevent
@@ -28,8 +27,7 @@ import process_line
 from camera_cv_tools import CameraLink
 from camera_cv_tools import color_to_gray
 from common import DebugLog, get_utc_now_ms
-
-import dft_stitch as dsl
+import dft_stitch as dft
 import motor_api
 from motor_uart import MotorLink
 from sweep_controller import SweepController
