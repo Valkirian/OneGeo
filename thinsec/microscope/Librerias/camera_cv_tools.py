@@ -7,7 +7,7 @@ import zmq.green as zmq
 import os
 import cv2
 from scipy import interpolate
-
+# Importando archivos.
 import common
 
 debug_log = common.DebugLog()

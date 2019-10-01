@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import Queue
+import queue
 import struct
 import serial
 import motor_api

@@ -11,7 +11,7 @@ import functools
 import json
 import signal
 import struct
-import StringIO
+from io import StringIO
 import sys
 import cv2
 from flask import Flask, send_file
@@ -22,7 +22,7 @@ import zmq.green as zmq
 
 # Importando funciones de otros archivos
 # Importando la funcion para cerrar la ejecucion y el parser
-import finejecucion
+
 import process_line
 from camera_cv_tools import CameraLink
 from camera_cv_tools import color_to_gray
@@ -102,7 +102,15 @@ def main():
 
     server = WebSocketServer(('0.0.0.0', opt.port), Resource(resources))
     
-    finejecucion.shutdown()
+    def shutdown():
+        for motor in motor_api.motor_address.keys():
+            motor_execution.set_hold_force(motor, False)
+            gevent.sleep(0.01)
+            #motor_api.py
+    motor_execution.set_axes_enabled(False)
+    server.stop()
+    zmq_ctx.destroy()
+    sys.exit()
 
     gevent.signal(signal.SIGINT, shutdown)
     gevent.signal(signal.SIGTERM, shutdown)

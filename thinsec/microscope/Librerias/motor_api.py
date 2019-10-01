@@ -1,4 +1,4 @@
-#import telnetlib
+# import telnetlib
 
 config_base = {'x': {'name': "X axis",
                      'index': 1},
