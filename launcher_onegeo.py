@@ -11,10 +11,12 @@ def main():
     # from thinsec.microscope import main_server
 
     # Corriendo la funcion principal de main_server
+    from components.thinsec.microscope import main_server
+
     main()
     time.sleep(0.9)
     # pdb.set_trace()
-    os.system("/bin/bash start.sh")
+    os.system("./components/start.sh")
 
 
 if __name__ == "__main__":
