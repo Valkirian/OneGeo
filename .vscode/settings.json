@@ -1,7 +1,8 @@
 {
     "python.formatting.provider": "black",
-    "python.pythonPath": "C:\\Users\\rachi\\.conda\\envs\\geomas\\python.exe",
+    "python.pythonPath": "geomas/bin/python",
     "python.linting.pylintEnabled": false,
     "python.linting.pep8Enabled": true,
-    "python.linting.enabled": true
+    "python.linting.enabled": true,
+    "git.ignoreLimitWarning": true
 }

@@ -1,0 +1,21 @@
+Metadata-Version: 2.0
+Name: supyr-struct
+Version: 1.3.2
+Summary: A versatile and extensible binary data parsing/serializing library for Python 3
+Home-page: http://bitbucket.org/moses_of_egypt/supyr_struct
+Author: Devin Bobadilla
+Author-email: MosesBobadilla@gmail.com
+License: MIT
+Keywords: supyr_struct,binary,data structure,parser,serializer,serialize
+Platform: POSIX
+Platform: Windows
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Provides: supyr_struct
+
+Could not read long description from readme.
+
+

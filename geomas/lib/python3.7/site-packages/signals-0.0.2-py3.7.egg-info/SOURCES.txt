@@ -1,0 +1,8 @@
+setup.cfg
+setup.py
+signals/__init__.py
+signals.egg-info/PKG-INFO
+signals.egg-info/SOURCES.txt
+signals.egg-info/dependency_links.txt
+signals.egg-info/top_level.txt
+signals.egg-info/zip-safe
