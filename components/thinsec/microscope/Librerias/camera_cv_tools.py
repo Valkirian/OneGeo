@@ -8,7 +8,7 @@ import os
 import cv2
 from scipy import interpolate
 # Importando archivos.
-import common
+from Librerias import common
 
 debug_log = common.DebugLog()
 

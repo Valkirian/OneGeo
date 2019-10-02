@@ -56,4 +56,4 @@ if __name__ == "__main__":
     import serial
     uart = serial.Serial("/dev/ttyACM0", 115200)
     uart = reset_controller(uart, chr(0x0A) + '1')
-    print ("After resetting:", uart.read(1) + uart.read(uart.inWaiting()))
+    print("After resetting:", uart.read(1) + uart.read(uart.inWaiting()))

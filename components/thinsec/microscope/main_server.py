@@ -23,14 +23,13 @@ import zmq.green as zmq
 # Importando funciones de otros archivos
 # Importando la funcion para cerrar la ejecucion y el parser
 
-import process_line
-from camera_cv_tools import CameraLink
-from camera_cv_tools import color_to_gray
-from common import DebugLog, get_utc_now_ms
-import dft_stitch as dft
-import motor_api
-from motor_uart import MotorLink
-from sweep_controller import SweepController
+from Librerias.camera_cv_tools import CameraLink
+from Librerias.camera_cv_tools import color_to_gray
+from Librerias.common import DebugLog, get_utc_now_ms
+import Librerias.dft_stitch as dft
+import Librerias.motor_api
+from Librerias.motor_uart import MotorLink
+from Librerias.sweep_controller import SweepController
 
 """
 =============================
@@ -297,8 +296,26 @@ def sweep_status_broadcast(sweep_event):
     debug_log("SWR", report)
     websockets_broadcast(report, 'sweep', 'stt')
 
+def process_command_line():
 
-process-command-line.process_command_line()
+    description = "Main program for controlling an automated microscope"
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        "camera_server_address",
+        default="tcp://localhost:50000",
+        help="socket base address where camera server is listening",
+        )
+    parser.add_argument(
+        "port", type=int, default=5000, help="TCP port over which to listen"
+    )
+    parser.add_argument(
+        "-u",
+        "--motor-debug",
+        action="store_true",
+        help=("If present, data traffic to/from motor controller will " "be shown"),
+    )
+
+    return parser.parse_args()
 
 if __name__ == "__main__":
     main()

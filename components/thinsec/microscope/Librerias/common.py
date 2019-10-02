@@ -55,7 +55,7 @@ def get_digits(number):
     return max(1, int(math.ceil(math.log10(number))))
 
 
-def ensure_dir(save_dir, mode=0750):
+def ensure_dir(save_dir, mode = '0750'):
     if not pth.isdir(save_dir):
         try:
             os.mkdir(save_dir, mode)

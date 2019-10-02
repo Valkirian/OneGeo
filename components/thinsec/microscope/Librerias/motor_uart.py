@@ -3,8 +3,8 @@
 import queue
 import struct
 import serial
-import motor_api
-from reset_uc import reset_controller
+import Librerias.motor_api
+from Librerias.reset_uc import reset_controller
 
 
 class MotorLink(motor_api.BaseMotorLink):
