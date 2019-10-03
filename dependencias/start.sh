@@ -3,7 +3,7 @@
 main()
 {   
     gui_script=${1:-"./main_server.py"}
-    sockets_spec=${1:-"ipc:////dev/shm/"}; shift
+    sockets_spec=${1:-"ipc://dev/shm/"}; shift
     stage_dir=${1:-"./images"}; shift
     driver_script_server=${1:-"./message_middleware/server_zmq"}; shift
     driver_script_client=${1:-"./message_middleware/client_zmq"}; shift
@@ -12,7 +12,7 @@ main()
     cleanup
     trap cleanup EXIT
 
-    python3 ${gui_script} ${sockets_spec} ${local_port} &
+    python3 ${gui_script} -w 50 ${sockets_spec} ${local_port} &
     ${driver_script_server}/bin/release/flyzmqserver ${sockets_spec} ${stage_dir} &
     ${driver_script_client}/frame_observer.py ${sockets_spec}.vid &
     sleep 2 && google-chrome-stable --no-sandbox "http://localhost:${local_port}" &

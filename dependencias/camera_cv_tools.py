@@ -87,7 +87,7 @@ def get_socket_adresses(base_address):
 
     elif base_address.startswith("tcp://"):
         host, port_s = base_address.split(':')
-        port = float(port_s)
+        port = int(port_s)
         cmd_addr = "{}:{:d}".format(host, port)
         stt_addr = "{}:{:d}".format(host, port + 1)
         vid_addr = "{}:{:d}".format(host, port + 2)
