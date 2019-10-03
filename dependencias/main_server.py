@@ -46,10 +46,10 @@ websockets = dict()
 # Guardando los objetos globales
 objects = dict()
 # Para este uso del metodo MotorLink, debemos ver que TTY representa el microscopio y el otro argumento son los baudios
-motor_execution = MotorLink("/dev/ttyACM0", 250000)
+motor_execution = MotorLink("/dev/ttyACM0", 9600)
 
 # Esto se tiene que cambiar cuando se quite el sh
-path_to_download_image = '/image'
+path_to_download_image = '/images'
 
 """
 ============================
