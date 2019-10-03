@@ -13,9 +13,9 @@ class MotorLink(motor_api.BaseMotorLink):
         self.port_name = port
         self.port_rate = baudrate
         self.uart = serial.Serial(self.port_name, self.port_rate)
-        self.uart_reply_queue = Queue.Queue()
-        self.uart_info_queue = Queue.Queue()
-        self.uart_debug_queue = Queue.Queue()
+        self.uart_reply_queue = queue.Queue()
+        self.uart_info_queue = queue.Queue()
+        self.uart_debug_queue = queue.Queue()
         self.readout_run = False
         self.debug = debug
 
