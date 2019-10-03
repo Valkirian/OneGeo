@@ -22,7 +22,6 @@ import zmq.green as zmq
 
 # Importando funciones de otros archivos
 # Importando la funcion para cerrar la ejecucion y el parser
-
 from camera_cv_tools import CameraLink
 from camera_cv_tools import color_to_gray
 from common import DebugLog, get_utc_now_ms
@@ -100,7 +99,7 @@ def main():
     resources['^/websocket'] = WSApplication
     resources['^/.*'] = app
 
-    server = WebSocketServer(('0.0.0.0', opt.port), Resource(resources))
+    server = WebSocketServer(('127.0.0.1', opt.port), Resource(resources))
     
     def shutdown():
         for motor in motor_api.motor_address.keys():

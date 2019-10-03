@@ -170,7 +170,7 @@ def archive_sweep(parameters, work_dir):
             os.remove(pic_path)
         os.remove(json_path)
         success = True
-    except IOError, e:
+    except IOError:
         debug_log("Error while creating sweep archive:", e)
         success = False
 

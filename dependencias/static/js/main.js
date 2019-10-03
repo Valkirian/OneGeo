@@ -1,4 +1,4 @@
-$(document).ready(function() {
+$(document).ready( () => {
 
     var wsUri = "ws://" + window.location.host + "/websocket",
         sweep_is_on = false,
