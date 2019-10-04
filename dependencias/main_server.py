@@ -15,8 +15,8 @@ from io import StringIO
 import sys
 import cv2
 from flask import Flask, send_file, Response, render_template, request, url_for, redirect
-from flask_socketio import SocketIO, emit
 import gevent
+from gevent import pywsgi
 from geventwebsocket import WebSocketServer, WebSocketApplication, Resource
 import zmq.green as zmq
 
@@ -299,10 +299,11 @@ def sweep_status_broadcast(sweep_event):
     websockets_broadcast(report, 'sweep', 'stt')
 
 
-WebSocketServer(
-    ('', 5000),
-    Resource(OrderedDict([('/', WSApplication)]))
-).serve_forever()
+# WebSocketServer(
+#     ('', 5000),
+#     Resource(OrderedDict([('/', WSApplication)]))
+# ).serve_forever()
+
 
 def process_command_line():
 
