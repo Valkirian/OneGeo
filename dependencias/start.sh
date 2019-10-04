@@ -3,7 +3,7 @@
 main()
 {   
     gui_script=${1:-"main_server.py"}
-    sockets_spec=${1:-"ipc:///dev/shm/tmpfs"}; shift
+    sockets_spec=${1:-"ipc:///dev/shm/"}; shift
     stage_dir=${1:-"./images"}; shift
     driver_script_server=${1:-"./message_middleware/server_zmq"}; shift
     driver_script_client=${1:-"./message_middleware/client_zmq"}; shift
