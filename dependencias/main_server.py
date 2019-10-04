@@ -15,6 +15,7 @@ from io import StringIO
 import sys
 import cv2
 from flask import Flask, send_file, Response, render_template, request, url_for, redirect
+from flask_socketio import SocketIO, emit
 import gevent
 from geventwebsocket import WebSocketServer, WebSocketApplication, Resource
 import zmq.green as zmq
@@ -139,9 +140,9 @@ def last_image():
 if __name__ == '__main__':
     app.run()
 
-
 # Implementacion del servidor de websockets
 class WSApplication(WebSocketApplication):
+    websocket = environ.get("wsgi.websocket")
     def on_open(self):
         print('Connection Opened')
         ws_type = 'manager' if len(websockets) == 0 else 'monitor'
@@ -246,10 +247,6 @@ def websockets_broadcast(data, identity, kind):
     for ws in websockets:
         send_to_client(ws, identity, data, kind)
 
-WebSocketServer(
-    ('', 5000),
-    Resource(OrderedDict([('/', WSApplication)]))
-).serve_forever()
 
 
 def send_to_client(websocket, name, payload, message_type):
@@ -301,6 +298,12 @@ def sweep_status_broadcast(sweep_event):
     debug_log("SWR", report)
     websockets_broadcast(report, 'sweep', 'stt')
 
+
+WebSocketServer(
+    ('', 5000),
+    Resource(OrderedDict([('/', WSApplication)]))
+).serve_forever()
+
 def process_command_line():
 
     description = "Main program for controlling an automated microscope"
@@ -321,6 +324,8 @@ def process_command_line():
     )
 
     return parser.parse_args()
+
+
 
 if __name__ == "__main__":
     main()
