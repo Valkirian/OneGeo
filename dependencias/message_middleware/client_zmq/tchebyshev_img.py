@@ -1,8 +1,8 @@
 import os.path as pth
-import pickle
+import _pickle as pickle
 import sys
 import os
-
+import pdb
 import cv2
 import numpy as np
 
@@ -89,7 +89,7 @@ dc.getcontext().prec = 50
 
 
 class DiscretePolynomial:
-    def __init__(self, lenght, base_dir="."):
+    def __init__(self, lenght, base_dir="./"):
 
         self.N = lenght
         self._computed = False
@@ -155,16 +155,22 @@ class DiscretePolynomial:
         return prod.sqrt()
 
     @staticmethod
-    def normalize_poly(denorm_poly, n, N, measure = MeasureSqrt):
+    def normalize_poly(denorm_poly, n, N, measure=MeasureSqrt):
         norm = measure(n, N)
         dec_norm_poly = [dnp / norm for dnp in denorm_poly]
         norm_poly = [float(p) for p in dec_norm_poly]
 
         return norm_poly
 
+    @property
+    def pickle_filename(self):
+        file_n = "tchebyshev-{}.pkl".format(self.N)
+        return pth.abspath(pth.join(self._base_dir, file_n))
+
     def pickle(self):
         with open(self.pickle_filename, "wb") as fobj:
             pickle.dump(self._terms, fobj)
+            fobj.close()
             print("Saved polynomial data to {}".format(self.pickle_filename))
 
     def unpickle(self):
@@ -177,13 +183,8 @@ class DiscretePolynomial:
                 )
                 self._terms = terms
                 self._computed = True
+                fobj.close()
                 print("Loaded polynomial data from {}".format(self.pickle_filename))
-
-    @property
-    def pickle_filename(self):
-        file_n = "tchebyshev-{}.pkl".format(self.N)
-        # return pth.abspath(pth.join(self._base_dir, file_n))
-        return pth.abspath(pth.join(self._base_dir, file_n))
 
     def get_moment_indices(N, M, max_idx):
         return [(n, m) for n in range(N) for m in range(M) if (n + m) <= max_idx]

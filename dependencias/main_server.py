@@ -4,7 +4,7 @@
 # Parchando modulos
 from gevent import monkey
 monkey.patch_all()
-
+import socket
 import argparse
 from collections import OrderedDict
 import functools
@@ -14,7 +14,7 @@ import struct
 from io import StringIO
 import sys
 import cv2
-from flask import Flask, send_file
+from flask import Flask, send_file, Response, render_template, request, url_for, redirect
 import gevent
 from geventwebsocket import WebSocketServer, WebSocketApplication, Resource
 import zmq.green as zmq
@@ -46,10 +46,10 @@ websockets = dict()
 # Guardando los objetos globales
 objects = dict()
 # Para este uso del metodo MotorLink, debemos ver que TTY representa el microscopio y el otro argumento son los baudios
-motor_execution = MotorLink("/dev/ttyACM0", 9600)
+motor_execution = MotorLink("/dev/ttyACM0", 250000)
 
 # Esto se tiene que cambiar cuando se quite el sh
-path_to_download_image = '/images'
+# path_to_download_image = '../images'
 
 """
 ============================
@@ -99,13 +99,12 @@ def main():
     resources['^/websocket'] = WSApplication
     resources['^/.*'] = app
 
-    server = WebSocketServer(('127.0.0.1', opt.port), Resource(resources))
+    server = WebSocketServer(('0.0.0.0', opt.port), Resource(resources))
     
     def shutdown():
         for motor in motor_api.motor_address.keys():
             motor_execution.set_hold_force(motor, False)
             gevent.sleep(0.01)
-            #motor_api.py
     motor_execution.set_axes_enabled(False)
     server.stop()
     zmq_ctx.destroy()
@@ -117,29 +116,34 @@ def main():
     server.serve_forever()
 
 # WebServer
-app = Flask('main_server')
+app = Flask(__name__)
+
+
 
 @app.route('/')
-def root():
+def home():
     return app.send_static_file('cam.html')
 
 @app.route('/<path:path>')
 def static_file(path):
     return app.send_static_file(path)
 
-@app.route(path_to_download_image)
+
+@app.route('/images')
 def last_image():
     stream = objects['last-image-data']
     debug_log("Will send a image")
     stream.seek(0)
     return send_file(stream, mimetype='image/png')
 
+if __name__ == '__main__':
+    app.run()
+
 
 # Implementacion del servidor de websockets
 class WSApplication(WebSocketApplication):
-
     def on_open(self):
-
+        print('Connection Opened')
         ws_type = 'manager' if len(websockets) == 0 else 'monitor'
         websockets[self.ws] = ws_type
         send_to_client(self.ws, 'motor', motor_api.get_hardware_config(), 'cfg')
@@ -148,24 +152,19 @@ class WSApplication(WebSocketApplication):
             motor_exec.set_axes_enabled(True)
 
     def on_close(self, reason):
-
         ws_type = websockets.pop(self.ws, None)
         debug_log(ws_type, repr(self.ws), "disconnected.")
 
     def on_message(self, message):
-
         if message is None: return
-
         msg = json.loads(message)
         message_type = msg['type']
         entity_name = msg['name']
         ws_type = websockets[self.ws]
-
         if ws_type == 'manager' and message_type == 'control':
             gui_user_command(entity_name, msg['message'], self.ws)
 
 def gui_user_command(name, payload, websocket):
-
     debug_log("User command to", name, ":", json.dumps(payload))
     command = payload['command']
     params = payload['params']
@@ -242,9 +241,15 @@ def gui_user_command(name, payload, websocket):
         elif command == "wait-time":
             motor_exec.set_trigger_wait_time(params['time'])
 
+
 def websockets_broadcast(data, identity, kind):
     for ws in websockets:
         send_to_client(ws, identity, data, kind)
+
+WebSocketServer(
+    ('', 5000),
+    Resource(OrderedDict([('/', WSApplication)]))
+).serve_forever()
 
 
 def send_to_client(websocket, name, payload, message_type):

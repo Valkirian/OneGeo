@@ -2,8 +2,8 @@
 
 main()
 {   
-    gui_script=${1:-"./main_server.py"}
-    sockets_spec=${1:-"ipc://dev/shm/"}; shift
+    gui_script=${1:-"main_server.py"}
+    sockets_spec=${1:-"ipc:///dev/shm/"}; shift
     stage_dir=${1:-"./images"}; shift
     driver_script_server=${1:-"./message_middleware/server_zmq"}; shift
     driver_script_client=${1:-"./message_middleware/client_zmq"}; shift
@@ -17,7 +17,7 @@ main()
     ${driver_script_client}/frame_observer.py ${sockets_spec}.vid &
     sleep 2 && google-chrome-stable --no-sandbox "http://localhost:${local_port}" &
 
-    echo "My PID is $$ (Use kill -KILL $$ to terminate all processes)"
+    echo "My shmid is $$ (Use kill -KILL $$ to terminate all processes)"
     wait
 
 }
