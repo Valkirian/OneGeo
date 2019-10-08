@@ -85,6 +85,7 @@ def main():
     motor_execution.restart()
     gevent.spawn(motor_execution.uart_readout_loop)
 
+    # Iniciando el SweepControllet
     controlador = SweepController(camaras, motor_execution, sweep_status_broadcast, debug=True)
     objects['sweep-controller'] = controlador
 
@@ -97,11 +98,14 @@ def main():
 
     resources = OrderedDict()
     # Agregando 2 pares al objeto OrderedDict
+    # Equivale a .append
     resources['^/websocket'] = WSApplication
     resources['^/.*'] = app
 
+    # Server de websocket
     server = WebSocketServer(('0.0.0.0', opt.port), Resource(resources))
     
+    # Funcion que apaga el motor
     def shutdown():
         for motor in motor_api.motor_address.keys():
             motor_execution.set_hold_force(motor, False)
@@ -117,6 +121,7 @@ def main():
     server.serve_forever()
 
 # WebServer
+# Cargando los archivos estaticos e iniciando el servidor flask
 app = Flask(__name__)
 
 
@@ -139,6 +144,7 @@ def last_image():
 
 if __name__ == '__main__':
     app.run()
+
 
 # Implementacion del servidor de websockets
 class WSApplication(WebSocketApplication):
@@ -170,6 +176,7 @@ def gui_user_command(name, payload, websocket):
     command = payload['command']
     params = payload['params']
     controller = objects['swp-ctl']
+    # Estos commandos son los que se ejecutan con JS en la web.
     if "cam" in name:
         camera = objects[name]
         if command == "set_cam_params":
@@ -298,13 +305,13 @@ def sweep_status_broadcast(sweep_event):
     debug_log("SWR", report)
     websockets_broadcast(report, 'sweep', 'stt')
 
+# Inicio del WebSocketServer para recibir y enviar los comandos al microscopio.
+WebSocketServer(
+    ('', 5000),
+    Resource(OrderedDict([('/', WSApplication)]))
+).serve_forever()
 
-# WebSocketServer(
-#     ('', 5000),
-#     Resource(OrderedDict([('/', WSApplication)]))
-# ).serve_forever()
-
-
+# Parsing.
 def process_command_line():
 
     description = "Main program for controlling an automated microscope"

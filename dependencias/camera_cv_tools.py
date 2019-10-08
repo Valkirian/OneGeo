@@ -14,6 +14,7 @@ debug_log = common.DebugLog()
 
 class CameraLink(object):
     def __init__(self, zmq_context, name):
+        # Seteando los parametros.
         self.name = name
         # pusher that emits camera configuration commands
         self.cmd_push = zmq_context.socket(zmq.PUSH)
@@ -29,6 +30,7 @@ class CameraLink(object):
         self.last_frame_data = ''
 
     def connect(self, base_address):
+        # Funcion que hace la conexion con el socket address y la camara.
         cmd_addr, stt_addr, vid_addr = get_socket_adresses(base_address)
         self.cmd_push.connect(cmd_addr)
         self.inf_subs_stt.connect(stt_addr)
@@ -36,33 +38,39 @@ class CameraLink(object):
         self.img_subs.connect(vid_addr)
 
     def start(self, callback_config, callback_status):
+        # seteando los parametros a la camara
         gevent.spawn(self.report_camera_config, callback_config)
         gevent.spawn(self.report_camera_status, callback_status)
         gevent.spawn(self.fetch_frames)
 
     def report_camera_config(self, callback):
+        # emitiendo mensajes de log para la config
         while True:
             rec = self.inf_subs_cfg.recv()
             message = json.loads(rec[5:])
             callback(message)
 
     def report_camera_status(self, callback):
+        # emitiendo mensajes de log para el status de la
         while True:
             rec = self.inf_subs_stt.recv()
             message = json.loads(rec[5:])
             callback(message)
 
     def fetch_frames(self):
+        # viendo las imagenes recibidas desde la camara y almacenandolas en una variable.
         while True:
             self.last_frame_data = self.img_subs.recv()
 
     def take_picture(self):
+        # Tomando las fotos, definiendo los pixeles y haciendo un resize
         cols, rows = 2448, 2048
         frame = np.fromstring(self.last_frame_data, np.uint8)
         frame.resize((rows, cols, 3))
 
         return frame
-
+    
+    # Pasando los datos de la configuracion de los comandos a la camara
     def set_config(self, params):
         self.cmd_push_dbg('config', params)
 
@@ -79,6 +87,7 @@ class CameraLink(object):
         debug_log("->", "CMD", name, params)
         self.cmd_push.send_json([name, params])
 
+# Funcion que define el address del servidor de la camara, IPC: Inter process, TCP.
 def get_socket_adresses(base_address):
     if base_address.startswith("ipc://"):
         cmd_addr = base_address + ".cmd"
@@ -102,8 +111,9 @@ def get_socket_adresses(base_address):
     cv-tools
 ==================
 """
-
+# Comienza desde aqui el manejo de las imagenes.
 def stream_to_cv2(data):
+    # Haciendo la imagen un array y luego leyendolo en color.
     data_array = np.frombuffer(data, dtype=np.uint8)
     image = cv2.imdecode(data_array, cv2.IMREAD_COLOR)
 
@@ -111,11 +121,13 @@ def stream_to_cv2(data):
 
 
 def cv2_to_stream(image, kind="jpg", quality=95):
+    # Encoding de la imagen a tipo 'jpg' cambiandole la calidad a la imagen y luego comprimiendolo en 'PNG'
     retval, buff = cv2.imencode('.' + kind, image,[cv2.IMWRITE_JPEG_QUALITY, quality,cv2.IMWRITE_PNG_COMPRESSION, 2])
     return buff.tostring()
 
 
 def file_to_cv2(source_file):
+    # Leyendo la imagen desde el 'real path'
     real_file = os.path.realpath(source_file)
     if not os.path.exists(real_file):
         raise IOError("File {} does not exist".format(source_file))
@@ -124,13 +136,16 @@ def file_to_cv2(source_file):
 
 
 def cv2_to_file(image, target_file, quality=95):
+    # Encoding de la imagen a tipo 'jpg' cambiandole la calidad a la imagen real y luego comprimiendolo en 'PNG'
     return cv2.imwrite(target_file, image, [cv2.IMWRITE_JPEG_QUALITY, quality,cv2.IMWRITE_PNG_COMPRESSION, 2])
 
 def color_to_gray(image):
+    # Cambiando la imagen a escala de grises.
     return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 
 def image_resize(image, percentage=100):
+    # Redimencionando la imagen segun su porcentaje.
     if percentage != 100:
         size = np.array(image.shape[:2])
         new_size = (percentage*size/100.0).astype(int)
@@ -142,11 +157,13 @@ def image_resize(image, percentage=100):
 
 
 def image_load_resize(image_file, percentage=100):
+    # Cargando la imagen y la imagen con el porcentaje modificado
     image = file_to_cv2(image_file)
     return image_resize(image, percentage)
 
 
 def precondition_blankfield(bkg_in, max_level=255):
+    # condicionando los campos en blanco '255' 
     offset = max_level - np.max(bkg_in)
     bkg_out = bkg_in + offset
 
@@ -154,6 +171,7 @@ def precondition_blankfield(bkg_in, max_level=255):
 
 
 def blankfield_linear_correct(img_in, bkg_in):
+    # Alineando los campos en  blanco
     inv_bkg_in = np.abs(np.max(bkg_in) - bkg_in)
     img_out = cv2.add(inv_bkg_in, img_in)
 
@@ -161,11 +179,13 @@ def blankfield_linear_correct(img_in, bkg_in):
 
 
 def blankfield_divide_correct(img_in, bkg_in):
+    # Dividiendo correctamente los campos en blanco
     im_i = cv2.divide(img_in.astype(np.float), bkg_in.astype(np.float))
     return np.uint8((255/im_i.max()) * im_i)
 
 
 def simple_blur(image, alpha=0.3):
+    #aplicando Blur gaussiano, mara suavizar bordes de la imagen.
     h, w = image.shape[:2]
     l = 2*int(0.5 * alpha * min(h, w)) + 1
     blurred = cv2.GaussianBlur(image, (l, l), 0)
@@ -174,6 +194,7 @@ def simple_blur(image, alpha=0.3):
 
 
 def blankfield_dark_correct(img_in, bkg_in, pre_blurred=False):
+    # Trabajando con los pixeles en negro '1' para corregirlos
     bfield_blur = bkg_in if not pre_blurred else simple_blur(bkg_in)
     bf_chans = cv2.split(bfield_blur)
     bf_mins = [np.abs(get_cdf(chan) - 1e-2).argmin() for chan in bf_chans]
@@ -183,7 +204,6 @@ def blankfield_dark_correct(img_in, bkg_in, pre_blurred=False):
     bf_min = min(bf_mins)
     bf_chans_deltas = [ch - bf_min for ch in bf_chans]
     """
-    #c_img = img_in.astype(int) - bfield_blur
     c_img = img_in.astype(int) - bfield_delta
     c_img[c_img < 0] = 0
 
@@ -191,6 +211,7 @@ def blankfield_dark_correct(img_in, bkg_in, pre_blurred=False):
 
 
 def blankfield_generate_flat(bkg_in):
+    # Obteniendo Hue, Saturation, Value 'HSV'
     h, s, v = cv2.split(cv2.cvtColor(bkg_in, cv2.COLOR_BGR2HSV))
     h_new = (np.median(h) * np.ones_like(h)).astype('uint8')
     s_new = (np.median(s) * np.ones_like(s)).astype('uint8')
@@ -203,6 +224,7 @@ def blankfield_generate_flat(bkg_in):
 
 
 def blankfield_weighted_correct(img_in, wgt_in):
+    # Cambiando los pesos de la imagen. 'backpropagation'
     img_c = np.round(wgt_in * img_in)
     if np.any(img_c > 255):
         print("Image overflowed when correcting by weight")
@@ -221,6 +243,7 @@ def adjust_gamma(image, gamma=1.0):
 
 
 def simple_grayscale_stretch(image):
+    # Simple conversion a escala de grises.
     avg = image.astype(float)
     stretched = 255*(avg - avg.min())/(avg.max() - avg.min())
 
@@ -228,6 +251,7 @@ def simple_grayscale_stretch(image):
 
 
 def stretch_value_channel(image, lower_pct=5, upper_pct=99):
+    # poniendo mas pequenos los canales 'HSV'
     img_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     h, s, v = cv2.split(img_hsv)
     v_corr = stretch_channel(v, lower_pct, upper_pct)
@@ -238,6 +262,7 @@ def stretch_value_channel(image, lower_pct=5, upper_pct=99):
 
 
 def stretch_channel(channel, lower_pct=5, upper_pct=99):
+    # Encojiendo los canales.
     v = channel
     ch_cdf_norm = get_cdf(v)
     ch_lower = np.abs(ch_cdf_norm - lower_pct*1e-2).argmin()
@@ -251,6 +276,7 @@ def stretch_channel(channel, lower_pct=5, upper_pct=99):
 
 
 def get_cdf(channel):
+    # Calculando histograma de la imagen
     hist = cv2.calcHist([channel], [0], None, [256], [0, 256])
     cdf = hist.cumsum()
     cdf_norm = cdf/cdf.max()
@@ -259,6 +285,7 @@ def get_cdf(channel):
 
 
 def is_image_dark(image):
+    # Haciendo el mismo procedimiento de los canales con una imagen en negro.
     img_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     h, s, v = cv2.split(img_hsv)
     v_cdf_norm = get_cdf(v)
@@ -286,6 +313,7 @@ def entropy_single_channel(channel, numbins):
 
 
 def entropy(image, subdivisions=10):
+    # Entropia con una imagen RGB
     h, w = image.shape[:2]
     stride_r = h/subdivisions
     stride_c = w/subdivisions
@@ -296,6 +324,7 @@ def entropy(image, subdivisions=10):
 
 
 def show_image_wait(img):
+    # mostrando la imagen
     cv2.namedWindow("image", cv2.WINDOW_NORMAL)
     cv2.imshow('image', img)
     cv2.waitKey(0)
@@ -303,6 +332,7 @@ def show_image_wait(img):
 
 
 def generate_spline_lut(interp_points):
+    # Interpolacion de pixeles.
     x, y = zip(*interp_points)
     spline = interpolate.interp1d(x, y, kind='cubic')
     lut = spline(range(256))
@@ -313,6 +343,7 @@ def generate_spline_lut(interp_points):
 
 
 def image_apply_lut(image_bgr, lut):
+    # Aplicando color-map 
     h, s, v = cv2.split(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2HSV))
     v_corr = cv2.LUT(v, lut)
     im_corr = cv2.cvtColor(cv2.merge((h, s, v_corr)), cv2.COLOR_HSV2BGR)

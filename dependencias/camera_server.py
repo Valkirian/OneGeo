@@ -13,7 +13,9 @@ import numpy as np
 import picamera.array
 import zmq
 
-from camera_driver import CameraDriver
+# Este archivo (camera_driver) no existe.
+# from camera_driver import CameraDriver
+
 from common import DebugLog, image_array_crop, default_crop
 
 debug_log = DebugLog()

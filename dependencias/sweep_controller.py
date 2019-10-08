@@ -1,12 +1,12 @@
-#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
-
+# Importando librerias.
 import itertools as it
 import os.path as pth
 import re
 from fysom import Fysom
 import numpy as np
 from scipy import interpolate
+# Importando archivos
 from common import DebugLog, print_state_change
 from motor_api import get_hardware_config
 
@@ -22,6 +22,7 @@ class SweepController(object):
     filename_re = re.compile(r'(?P<kind>[^/]+)/(?P<ana>[0-9]+)/(?P<y>[0-9]+)_(?P<x>[0-9]+)')
 
     def __init__(self, cameras, motor_executor, notify_fun, debug=False):
+        # Parseando los eventos que realiza el motor con los comandos que se le dan desde la web.
         self.cameras = cameras
         self.motor_exec = motor_executor
         self.notify_fun = notify_fun
@@ -73,7 +74,6 @@ class SweepController(object):
         limit_row = parameters['limit_row']
         limit_column = parameters['limit_col']
         limit_angle = parameters['limit_angle']
-        #spec_stack = parameters['spec_stack']
         self.motion_wait_time_ms = parameters['wait']
         self.num_rows = limit_row + 1
         self.num_cols = limit_column + 1
@@ -127,6 +127,7 @@ class SweepController(object):
         debug_log("FSM", "Preparing sweep...")
 
     def prepare_motors(self, event):
+        # Parametros para la preparacion de los motores.
         for motor in motor_indices:
             self.motor_exec.set_acceleration(motor, self.accelerations[motor], True)
             self.motor_exec.set_max_speed(motor, self.max_speeds[motor], True)
@@ -145,6 +146,7 @@ class SweepController(object):
             self.fsm.trigger("motor-ready")
 
     def preparation_done(self, event):
+        # Esta funcion se ejecuta cuando la preparacion esta completa, con los axes y la posicion logica del lente.
         axes = self.strides.keys()
         self.position = { axis: 0 for axis in axes }
         self.logical_step = { axis: 0 for axis in axes }
@@ -160,12 +162,14 @@ class SweepController(object):
             debug_log("FSM", "Halt sweep")
 
     def sweep_fast_axis(self, event):
+        # Movimientos de los axis hacia la posicion correcta de la imagen.
         debug_log("FSM", "sweep for pictures", self.logical_step)
         self.motor_exec.set_trigger_positions(self.seq_cols, self.seq_cols2)
         self.motor_exec.execute_trigger_positions(True)
         
 
     def move(self, event):
+        # Movimientos del brazo del microscopio
         ax_major, ax_minor, ax_fast = self.sweep_order
         idx_major, idx_minor, seq_fastaxis = self.sweep_commands.next()
         if idx_major != self.last_major_tag:
@@ -266,9 +270,11 @@ class SweepController(object):
             debug_log("MOT", "in sweep, step:", self.logical_step[ax_fast])
 
     def focus_reset(self):
+        # reset del foco de la camara
         self.focus_table = set()
 
     def focus_set(self):
+        # Setting el foco de la camara
         point = (self.motor_exec.get_position('x'), self.motor_exec.get_position('y'), self.motor_exec.get_position('z'))
         self.focus_table.add(point)
         debug_log("FCS", "new point:", point)

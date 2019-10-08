@@ -2,6 +2,7 @@
 
 main()
 {   
+    # Establenciendo las variables de entorno y los shared memory
     gui_script=${1:-"main_server.py"}
     sockets_spec=${1:-"ipc:///dev/shm/"}; shift
     stage_dir=${1:-"./images"}; shift
@@ -12,6 +13,7 @@ main()
     cleanup
     trap cleanup EXIT
 
+    # Haciendo la ejecucion del main server, abriendo el mavegador y abriendo los sockets.
     python3 ${gui_script} -w 50 ${sockets_spec} ${local_port} &
     ${driver_script_server}/bin/release/flyzmqserver ${sockets_spec} ${stage_dir} &
     ${driver_script_client}/frame_observer.py ${sockets_spec}.vid &
