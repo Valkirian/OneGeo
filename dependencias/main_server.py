@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-
-# Importando todas las librerias necesarias
 # Parchando modulos
 from gevent import monkey
 monkey.patch_all()
+
+# Importando todas las librerias necesarias
 import socket
 import argparse
 from collections import OrderedDict
@@ -22,7 +22,6 @@ import zmq.green as zmq
 
 
 # Importando funciones de otros archivos
-# Importando la funcion para cerrar la ejecucion y el parser
 from camera_cv_tools import CameraLink
 from camera_cv_tools import color_to_gray
 from common import DebugLog, get_utc_now_ms
@@ -46,7 +45,7 @@ websockets = dict()
 
 # Guardando los objetos globales
 objects = dict()
-# Para este uso del metodo MotorLink, debemos ver que TTY representa el microscopio y el otro argumento son los baudios
+# Para este uso del metodo MotorLink, debemos ver que TTY representa el microscopio y el otro argumento son los baudrate
 motor_execution = MotorLink("/dev/ttyACM0", 250000)
 
 # Esto se tiene que cambiar cuando se quite el sh

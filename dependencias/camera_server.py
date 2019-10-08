@@ -135,7 +135,6 @@ def take_picture(camera, pictures_dir):
     toc = time.time()
     camera.adi_capture_array.truncate(0)
     camera.capture(capture_output, format=format, use_video_port=True)
-                   #use_video_port=camera.recording)
 
     if format == 'bgr':
         image = camera.adi_capture_array.array
